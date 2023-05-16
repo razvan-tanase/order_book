@@ -1,6 +1,21 @@
 #![no_std]
 
+use multiversx_sc::types::BigUint;
+
 multiversx_sc::imports!();
+multiversx_sc::derive_imports!();
+
+#[derive(NestedEncode, NestedDecode, TopEncode, TopDecode, TypeAbi)]
+struct Order<M: ManagedTypeApi> {
+    token_in: TokenIdentifier<M>,
+    amount_in: BigUint<M>,
+    token_out: TokenIdentifier<M>,
+    amount_out_min: BigUint<M>,
+    owner: ManagedAddress<M>,
+    deadline: u64,
+    executed: bool,
+    cancelled: bool,
+}
 
 mod swap_tokens_proxy {
     multiversx_sc::imports!();
