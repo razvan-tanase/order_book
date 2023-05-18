@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                            0
+// Endpoints:                           14
 // Async Callback (empty):               1
-// Total number of exported functions:   2
+// Total number of exported functions:  16
 
 #![no_std]
 #![feature(lang_items)]
@@ -16,8 +16,22 @@ multiversx_sc_wasm_adapter::allocator!();
 multiversx_sc_wasm_adapter::panic_handler!();
 
 multiversx_sc_wasm_adapter::endpoints! {
-    empty
+    order_book
     (
+        openOrder
+        executeOrder
+        closeOrder
+        clearStorage
+        getOrdersCount
+        getOrder
+        getOrderOffer
+        getOrderOfferToken
+        getOrderOfferAmount
+        getOrderBidToken
+        getOrderBidAmount
+        getCurrentFunds
+        claimTokens
+        getOrders
     )
 }
 

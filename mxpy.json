@@ -1,0 +1,19 @@
+{
+    "configurations": {
+        "default": {
+            "proxy": "https://devnet-api.multiversx.com",
+            "chainID": "D"
+        }
+    },
+    "contract":{
+        "deploy":{
+            "verbose": true,
+            "bytecode": "output/order_book.wasm",
+            "recall-nonce": true,
+            "pem": "/home/razvan/licenta/ping-pong/wallet/wallet-owner.pem",
+            "gas-limit": 59999999,
+            "send": true,
+            "outfile": "deploy-testnet.interaction.json"
+        }
+    }
+}
