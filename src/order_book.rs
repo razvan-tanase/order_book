@@ -5,7 +5,6 @@ use multiversx_sc::types::BigUint;
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-
 #[derive(TopEncode, TopDecode, TypeAbi)]
 pub struct Order<M: ManagedTypeApi> {
     pub owner: ManagedAddress<M>,
@@ -34,7 +33,6 @@ mod swap_tokens_proxy {
 pub trait OrderBookContract {
     #[init]
     fn init(&self) {}
-
 
     #[payable("*")]
     #[endpoint(openOrder)]
@@ -74,12 +72,26 @@ pub trait OrderBookContract {
         index: usize,
         pair_address: ManagedAddress
     ) {
-        let order = self.orders().get(index);
-        let (token_in, amount_in) = order.offer;
-        let (token_out, amount_out_min) = order.bid;
+        self.actual_swap_fixed_input(pair_address, index);
+    }
 
-        self.close_order(index);
-        self.actual_swap_fixed_input(pair_address, token_in, amount_in, token_out, amount_out_min);
+    #[callback]
+    fn my_endpoint_callback(
+        &self,
+        index: usize,
+        owner: ManagedAddress,
+        #[call_result] result: ManagedAsyncCallResult<EsdtTokenPayment>
+    ) {
+        match result {
+            ManagedAsyncCallResult::Ok(value) => {
+                let (swaped_token, _, amount_swaped) = value.into_tuple();
+                self.send().direct_esdt(&owner, &swaped_token, 0, &amount_swaped);
+                self.close_order(index);
+            },
+            ManagedAsyncCallResult::Err(_) => {
+                // log the error in storage
+            },
+        }
     }
 
     #[endpoint(clearStorage)]
@@ -90,6 +102,11 @@ pub trait OrderBookContract {
     #[view(getOrdersCount)]
     fn get_orders_count(&self) -> usize {
         self.orders().len()
+    }
+
+    #[view(getOrderOwner)]
+    fn get_order_owner(&self, index: usize) -> ManagedAddress<Self::Api> {
+        self.orders().get(index).owner
     }
 
     #[view(getOrderOfferToken)]
@@ -139,16 +156,18 @@ pub trait OrderBookContract {
     fn actual_swap_fixed_input(
         &self,
         pair_address: ManagedAddress,
-        token_in: TokenIdentifier,
-        amount_in: BigUint,
-        token_out: TokenIdentifier,
-        amount_out_min: BigUint
+        index: usize
     ) -> EsdtTokenPayment<Self::Api> {
+        let order = self.orders().get(index);
+        let (token_in, amount_in) = order.offer;
+        let (token_out, amount_out_min) = order.bid;
+
         self.pair_contract_proxy(pair_address)
             .swap_tokens_fixed_input(token_out, amount_out_min)
             .with_esdt_transfer(EsdtTokenPayment::new(token_in, 0, amount_in))
             .async_call()
-            .call_and_exit();
+            .with_callback(self.callbacks().my_endpoint_callback(index, order.owner))
+            .call_and_exit()
         }
 
     // storage
