@@ -10,6 +10,10 @@ pub struct Order<M: ManagedTypeApi> {
     pub owner: ManagedAddress<M>,
     pub offer: (TokenIdentifier<M>, BigUint<M>),
     pub bid: (TokenIdentifier<M>, BigUint<M>),
+    // pub token_in: TokenIdentifier<M>,
+    // pub amount_in: BigUint<M>,
+    // pub token_out: TokenIdentifier<M>,
+    // pub amount_out_min: BigUint<M>,
 }
 
 mod swap_tokens_proxy {
@@ -89,7 +93,7 @@ pub trait OrderBookContract {
                 self.close_order(index);
             },
             ManagedAsyncCallResult::Err(_) => {
-                // log the error in storage
+                sc_panic!("Error while executing the swap");
             },
         }
     }
