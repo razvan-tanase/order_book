@@ -46,6 +46,7 @@ pub trait OrderBookContract {
         amount_out_min: BigUint
     ) {
         require!(token_out.is_valid_esdt_identifier(), "Invalid token out provided");
+        require!(limit > 0, "Limit must be greater than 0");
         require!(amount_out_min > 0, "Amount out min must be greater than 0");
     
         let (token_in, amount_in) = self.call_value().single_fungible_esdt();
@@ -70,6 +71,9 @@ pub trait OrderBookContract {
         &self,
         index: usize
     ) {
+        let order = self.orders().get(index);
+
+        self.send().direct_esdt(&order.owner, &order.token_in, 0, &order.amount_in);
         self.orders().swap_remove(index);
     }
 
@@ -106,7 +110,8 @@ pub trait OrderBookContract {
                 
                 self.send().direct_esdt(&self.blockchain().get_owner_address(), &swaped_token, 0, &bot_fee);
                 self.send().direct_esdt(&owner, &swaped_token, 0, &remaining_amount);
-                self.close_order(index);
+                self.orders().swap_remove(index);
+
             },
             ManagedAsyncCallResult::Err(_) => {
                 sc_panic!("Error while executing the swap");
@@ -114,19 +119,29 @@ pub trait OrderBookContract {
         }
     }
 
+    #[only_owner]
     #[endpoint(clearStorage)]
     fn clear_storage(&self) {
-        self.orders().clear();
+        for _ in 0..self.get_orders_count() {
+            self.close_order(1);
+        }
     }
+
+    // private
+
+    #[proxy]
+    fn pair_contract_proxy(&self, pair_address: ManagedAddress) -> swap_tokens_proxy::Proxy<Self::Api>;
+
+    // views
 
     #[view(getOrdersCount)]
     fn get_orders_count(&self) -> usize {
         self.orders().len()
     }
 
-    #[view(getOrderOwner)]
-    fn get_order_owner(&self, index: usize) -> ManagedAddress<Self::Api> {
-        self.orders().get(index).owner
+    #[view(getOrder)]
+    fn get_order(&self, index: usize) -> Order<Self::Api> {
+        self.orders().get(index)
     }
 
     #[view(getCurrentFunds)]
@@ -147,11 +162,6 @@ pub trait OrderBookContract {
 
         self.send().direct(&owner, &token, 0, &sc_balance);
     }
-
-    // private
-
-    #[proxy]
-    fn pair_contract_proxy(&self, pair_address: ManagedAddress) -> swap_tokens_proxy::Proxy<Self::Api>;
 
     // storage
 
