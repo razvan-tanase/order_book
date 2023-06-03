@@ -15,8 +15,8 @@ pub struct Order<M: ManagedTypeApi> {
     pub token_out: TokenIdentifier<M>,
     pub limit: BigUint<M>,
     pub amount_out_min: BigUint<M>,
-    pub bot_fee: BigUint<M>,
-    pub remaining_amount: BigUint<M>,
+    // pub bot_fee: BigUint<M>,
+    // pub remaining_amount: BigUint<M>,
     // pub limit: BigUint<M>,
     // in bid o sa fie cantintatea, nu pretul la care sa se cumpere
 }
@@ -68,18 +68,18 @@ pub trait OrderBookContract {
 
         // amount_in * limit * 0.98703 = numarul de inmultit pentru slippage + fees
 
-        let mut order = Order {
+        let order = Order {
             owner: self.blockchain().get_caller(),
             token_in,
             amount_in,
             token_out,
             limit,
-            amount_out_min,
-            bot_fee: BigUint::from(0 as u32),
-            remaining_amount: BigUint::from(0 as u32),
+            amount_out_min
+            // bot_fee: BigUint::from(0 as u32),
+            // remaining_amount: BigUint::from(0 as u32),
         };
 
-        self.orders().push(&mut order);
+        self.orders().push(&order);
     }
 
     #[endpoint(closeOrder)]
@@ -98,7 +98,7 @@ pub trait OrderBookContract {
         &self, 
         index: usize,
         pair_address: ManagedAddress
-    ) {
+    ) -> EsdtTokenPayment<Self::Api> {
         let order = self.orders().get(index);
 
         self.pair_contract_proxy(pair_address)
@@ -118,7 +118,8 @@ pub trait OrderBookContract {
     ) {
         match result {
             ManagedAsyncCallResult::Ok(payment) => {
-                let (swaped_token, _, amount_swaped) = payment.into_tuple();
+                // let (swaped_token, _, amount_swaped) = payment.into_tuple();
+                // let (swaped_token, amount_swaped) = self.call_value().single_fungible_esdt(); 
 
                 // let order_fee: u32 = 10000;
                 // let bot_fee = &amount_swaped / order_fee;
@@ -130,16 +131,22 @@ pub trait OrderBookContract {
                 // self.orders().push(&mut order);
 
                 // self.send().direct_esdt(&self.blockchain().get_owner_address(), &swaped_token, 0, &bot_fee);
-                self.send().direct_esdt(&owner, &swaped_token, 0, &amount_swaped);
+                // self.send().direct_esdt(&owner, &swaped_token, 0, &amount_swaped);
 
-                self.orders().swap_remove(index);
                 // 65 320 180
                 // 65 320 18
-            },
+
+                let (swaped_token, _, amount_swaped) = payment.into_tuple();
+                self.send().direct_esdt(&owner, &swaped_token, 0, &amount_swaped);
+                self.orders().swap_remove(index);
+
+            }
             ManagedAsyncCallResult::Err(_) => {
                 sc_panic!("Error while executing the swap");
-            },
+            }
         }
+
+
     }
 
     #[view(getCurrentFunds)]
@@ -164,10 +171,10 @@ pub trait OrderBookContract {
     #[only_owner]
     #[endpoint(clearStorage)]
     fn clear_storage(&self) {
-        for index in 0..self.get_orders_count() {
-            self.close_order(index + 1);
-        }
-        // self.orders().clear();
+        // for _ in 0..self.get_orders_count() {
+        //     self.close_order(1);
+        // }
+        self.orders().clear();
     }
 
     // private
@@ -192,15 +199,15 @@ pub trait OrderBookContract {
         self.orders().get(index).amount_out_min
     }
 
-    #[view(getBotFee)]
-    fn get_bot_fee(&self, index: usize) -> BigUint {
-        self.orders().get(index).bot_fee
-    }
+    // #[view(getBotFee)]
+    // fn get_bot_fee(&self, index: usize) -> BigUint {
+    //     self.orders().get(index).bot_fee
+    // }
 
-    #[view(getRemainingAmount)]
-    fn get_remaining_amount(&self, index: usize) -> BigUint {
-        self.orders().get(index).remaining_amount
-    }
+    // #[view(getRemainingAmount)]
+    // fn get_remaining_amount(&self, index: usize) -> BigUint {
+    //     self.orders().get(index).remaining_amount
+    // }
 
     // storage 
 
