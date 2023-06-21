@@ -5,9 +5,9 @@
 ////////////////////////////////////////////////////
 
 // Init:                                 1
-// Endpoints:                            7
+// Endpoints:                           11
 // Async Callback:                       1
-// Total number of exported functions:   9
+// Total number of exported functions:  13
 
 #![no_std]
 #![feature(lang_items)]
@@ -21,9 +21,13 @@ multiversx_sc_wasm_adapter::endpoints! {
         openOrder
         closeOrder
         executeOrder
+        changeToExecuted
+        isExecuted
         clearStorage
         getOrdersCount
         getOrder
+        getCurrentFunds
+        claimTokens
         getOrders
         callBack
     )
